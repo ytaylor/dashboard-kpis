@@ -1,122 +1,133 @@
+"""
+Dashboard de KPIs - Aplicación Principal
+"""
 import streamlit as st
-import pandas as pd
-import plotly.express as px
-from datetime import datetime
+from config.settings import PAGE_CONFIG, COLUMNAS
+from utils.data_processor import (
+    cargar_y_limpiar_datos, 
+    validar_columnas, 
+    crear_columnas_agrupacion,
+    aplicar_filtros
+)
+from components.sidebar import (
+    mostrar_carga_archivo,
+    mostrar_info_archivo,
+    mostrar_promociones,
+    mostrar_modulos,
+    mostrar_filtros
+)
+from components.tab_kpis import mostrar_tab_kpis
+from components.tab_promocion import mostrar_tab_promocion
+from components.tab_modulo import mostrar_tab_modulo
+from components.tab_datos import mostrar_tab_datos
+from components.tab_agrupados import mostrar_tab_agrupados
+
 
 # Configuración de la página
-st.set_page_config(page_title="Dashboard KPIs", layout="wide")
+st.set_page_config(**PAGE_CONFIG)
 
 # Título
 st.title("📊 Dashboard de KPIs")
 
-# Sidebar para cargar archivo
-st.sidebar.header("Cargar datos")
-uploaded_file = st.sidebar.file_uploader("Sube tu archivo Excel", type=['xlsx', 'xls'])
+# Sidebar - Carga de archivo
+uploaded_file = mostrar_carga_archivo()
 
 if uploaded_file is not None:
-    # Leer el archivo Excel
-    df = pd.read_excel(uploaded_file)
+    # Cargar y procesar datos
+    df = cargar_y_limpiar_datos(uploaded_file)
     
-    # Mostrar información básica
-    st.sidebar.success(f"✅ Archivo cargado: {uploaded_file.name}")
-    st.sidebar.info(f"Filas: {len(df)} | Columnas: {len(df.columns)}")
+    # Validar columnas
+    es_valido, mensaje_error, tiene_modulo = validar_columnas(df)
     
-    # Tabs para organizar el contenido
-    tab1, tab2, tab3 = st.tabs(["📈 KPIs Principales", "📊 Análisis", "📋 Datos"])
+    if not es_valido:
+        st.error(mensaje_error)
+        st.stop()
     
-    with tab1:
-        st.header("KPIs Principales")
-        
-        # Ejemplo de métricas (ajusta según tus columnas)
-        col1, col2, col3, col4 = st.columns(4)
-        
-        # Aquí calculas tus KPIs - ejemplo genérico:
-        if len(df.select_dtypes(include=['number']).columns) > 0:
-            numeric_cols = df.select_dtypes(include=['number']).columns
-            
-            with col1:
-                st.metric("Total Registros", len(df))
-            
-            with col2:
-                if len(numeric_cols) > 0:
-                    st.metric(f"Suma {numeric_cols[0]}", f"{df[numeric_cols[0]].sum():,.0f}")
-            
-            with col3:
-                if len(numeric_cols) > 1:
-                    st.metric(f"Promedio {numeric_cols[1]}", f"{df[numeric_cols[1]].mean():,.2f}")
-            
-            with col4:
-                if len(numeric_cols) > 0:
-                    st.metric(f"Máximo {numeric_cols[0]}", f"{df[numeric_cols[0]].max():,.0f}")
+    # Crear columnas de agrupación
+    df, columnas_agrupacion, columnas_excluir = crear_columnas_agrupacion(df, tiene_modulo)
     
-    with tab2:
-        st.header("Análisis Detallado")
-        
-        # Selector de columnas para graficar
-        numeric_columns = df.select_dtypes(include=['number']).columns.tolist()
-        
-        if numeric_columns:
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                selected_col = st.selectbox("Selecciona columna para gráfico", numeric_columns)
-                
-                # Gráfico de barras
-                fig = px.bar(df.head(20), y=selected_col, title=f"Top 20 - {selected_col}")
-                st.plotly_chart(fig, use_container_width=True)
-            
-            with col2:
-                if len(numeric_columns) > 1:
-                    selected_col2 = st.selectbox("Selecciona otra columna", numeric_columns, index=1)
-                    
-                    # Gráfico de línea
-                    fig2 = px.line(df.head(20), y=selected_col2, title=f"Tendencia - {selected_col2}")
-                    st.plotly_chart(fig2, use_container_width=True)
-        
-        # Estadísticas descriptivas
-        st.subheader("Estadísticas Descriptivas")
-        st.dataframe(df.describe(), use_container_width=True)
+    # Mostrar información en sidebar
+    mostrar_info_archivo(uploaded_file, df)
     
-    with tab3:
-        st.header("Vista de Datos")
+    if tiene_modulo:
+        st.sidebar.success("✅ Agrupando por Promoción y Módulo")
+    else:
+        st.sidebar.info("ℹ️ Agrupando solo por Promoción")
+    
+    # Mostrar promociones y módulos
+    promociones = mostrar_promociones(df)
+    modulos = mostrar_modulos(df) if tiene_modulo else None
+    
+    # Filtros
+    filtro_promocion, filtro_modulo = mostrar_filtros(promociones, modulos, tiene_modulo)
+    
+    # Aplicar filtros
+    df_filtrado = aplicar_filtros(df, filtro_promocion, filtro_modulo, tiene_modulo)
+    
+    # Crear tabs
+    if tiene_modulo:
+        tab1, tab2, tab3, tab4, tab5 = st.tabs([
+            "📈 KPIs Principales", 
+            "📊 Análisis por Promoción", 
+            "📚 Análisis por Módulo",
+            "📋 Datos", 
+            "🔢 Datos Agrupados"
+        ])
         
-        # Filtros
-        st.subheader("Filtrar datos")
+        with tab1:
+            mostrar_tab_kpis(df_filtrado, tiene_modulo, columnas_excluir)
         
-        # Mostrar datos con opción de búsqueda
-        search = st.text_input("🔍 Buscar en los datos")
+        with tab2:
+            mostrar_tab_promocion(df_filtrado, columnas_excluir)
         
-        if search:
-            mask = df.astype(str).apply(lambda x: x.str.contains(search, case=False, na=False)).any(axis=1)
-            filtered_df = df[mask]
-        else:
-            filtered_df = df
+        with tab3:
+            mostrar_tab_modulo(df_filtrado, columnas_excluir)
         
-        st.dataframe(filtered_df, use_container_width=True, height=400)
+        with tab4:
+            mostrar_tab_datos(df_filtrado)
         
-        # Botón para descargar datos procesados
-        csv = filtered_df.to_csv(index=False).encode('utf-8')
-        st.download_button(
-            label="📥 Descargar datos filtrados (CSV)",
-            data=csv,
-            file_name=f"kpis_procesados_{datetime.now().strftime('%Y%m%d')}.csv",
-            mime="text/csv"
-        )
+        with tab5:
+            mostrar_tab_agrupados(df_filtrado, tiene_modulo, columnas_excluir)
+    else:
+        tab1, tab2, tab4, tab5 = st.tabs([
+            "📈 KPIs Principales", 
+            "📊 Análisis por Promoción", 
+            "📋 Datos", 
+            "🔢 Datos Agrupados"
+        ])
+        
+        with tab1:
+            mostrar_tab_kpis(df_filtrado, tiene_modulo, columnas_excluir)
+        
+        with tab2:
+            mostrar_tab_promocion(df_filtrado, columnas_excluir)
+        
+        with tab4:
+            mostrar_tab_datos(df_filtrado)
+        
+        with tab5:
+            mostrar_tab_agrupados(df_filtrado, tiene_modulo, columnas_excluir)
 
 else:
+    # Mensaje inicial
     st.info("👈 Por favor, sube un archivo Excel desde la barra lateral para comenzar")
     
-    # Instrucciones
     st.markdown("""
     ### 📝 Instrucciones:
     1. Sube tu archivo Excel usando el botón en la barra lateral
-    2. Los KPIs se calcularán automáticamente
+    2. El sistema automáticamente:
+       - ✅ Eliminará las columnas "Submitted At" y "Token"
+       - ✅ Usará la columna de promoción como índice
+       - ✅ Agrupará por módulo (si existe)
+       - ✅ **Calculará porcentajes DENTRO de cada promoción/módulo**
     3. Explora las diferentes pestañas para ver análisis y datos
     
     ### 🎯 Características:
-    - ✅ Carga automática de datos
-    - ✅ KPIs calculados en tiempo real
+    - ✅ Procesamiento automático de datos
+    - ✅ Agrupación por Promoción y Módulo
+    - ✅ KPIs calculados por grupo (Media y Mediana)
+    - ✅ **Análisis de satisfacción en porcentajes POR PROMOCIÓN**
     - ✅ Gráficos interactivos
-    - ✅ Filtrado y búsqueda de datos
-    - ✅ Descarga de resultados procesados
+    - ✅ Filtrado dinámico
+    - ✅ Descarga de resultados
     """)
