@@ -54,11 +54,13 @@ if uploaded_file is not None:
     else:
         st.sidebar.info("ℹ️ Agrupando solo por Promoción")
     
+
+
     # Mostrar promociones y módulos
     promociones = mostrar_promociones(df)
     modulos = mostrar_modulos(df) if tiene_modulo else None
     
-    # Filtros
+        # Filtros
     filtro_promocion, filtro_modulo = mostrar_filtros(promociones, modulos, tiene_modulo)
     
     # Aplicar filtros

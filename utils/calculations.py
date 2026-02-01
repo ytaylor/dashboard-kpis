@@ -36,7 +36,6 @@ def calcular_porcentajes(df_data, columna, grupo_col, nombre_grupo='Grupo'):
     
     return resultado
 
-
 def calcular_porcentajes_con_filtro(df_data, columna, grupo_col, nombre_grupo='Grupo', filtro_modulo=None):
     """
     Calcula porcentajes de respuestas DENTRO de cada grupo, 
@@ -55,6 +54,9 @@ def calcular_porcentajes_con_filtro(df_data, columna, grupo_col, nombre_grupo='G
     if columna not in df_data.columns:
         return None, None
     
+    if grupo_col not in df_data.columns:
+        return None, None
+    
     # Aplicar filtro de módulo si existe
     df_filtrado = df_data.copy()
     if filtro_modulo and COLUMNAS['modulo'] in df_data.columns:
@@ -64,21 +66,35 @@ def calcular_porcentajes_con_filtro(df_data, columna, grupo_col, nombre_grupo='G
     if len(df_filtrado) == 0:
         return None, None
     
-    # Contar respuestas por grupo
-    conteo = df_filtrado.groupby([grupo_col, columna]).size().reset_index(name='Cantidad')
+    # Verificar que la columna de grupo existe en el DataFrame filtrado
+    if grupo_col not in df_filtrado.columns:
+        return None, None
     
-    # Calcular total por grupo
-    total_por_grupo = df_filtrado.groupby(grupo_col).size().reset_index(name='Total')
+    # Eliminar valores nulos en las columnas relevantes
+    df_filtrado = df_filtrado[[grupo_col, columna]].dropna()
     
-    # Merge y calcular porcentaje DENTRO de cada grupo
-    resultado = conteo.merge(total_por_grupo, on=grupo_col)
-    resultado['Porcentaje'] = (resultado['Cantidad'] / resultado['Total'] * 100).round(2)
+    if len(df_filtrado) == 0:
+        return None, None
     
-    # Renombrar la columna de grupo DESPUÉS de todos los cálculos
-    resultado = resultado.rename(columns={grupo_col: nombre_grupo})
-    
-    return resultado, df_filtrado
-
+    try:
+        # Contar respuestas por grupo
+        conteo = df_filtrado.groupby([grupo_col, columna]).size().reset_index(name='Cantidad')
+        
+        # Calcular total por grupo
+        total_por_grupo = df_filtrado.groupby(grupo_col).size().reset_index(name='Total')
+        
+        # Merge y calcular porcentaje DENTRO de cada grupo
+        resultado = conteo.merge(total_por_grupo, on=grupo_col)
+        resultado['Porcentaje'] = (resultado['Cantidad'] / resultado['Total'] * 100).round(2)
+        
+        # Renombrar la columna de grupo DESPUÉS de todos los cálculos
+        resultado = resultado.rename(columns={grupo_col: nombre_grupo})
+        
+        return resultado, df_filtrado
+        
+    except Exception as e:
+        print(f"Error en calcular_porcentajes_con_filtro: {str(e)}")
+        return None, None
 
 def calcular_porcentajes_combinado(df_data, columna, grupo_cols, nombres_grupos=['Grupo1', 'Grupo2']):
     """
