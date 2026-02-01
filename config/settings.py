@@ -29,6 +29,10 @@ FILTROS_ESPECIALES = {
     "recomendacion": {
         'modulo': 'Módulo 4',  # No hay filtro especial
         'descripcion': 'Esta pregunta se calcula solo para el Módulo 4'
+    },
+    "expectativas_IA": {
+        'modulo': None,  # No hay filtro especial
+        'descripcion': 'Esta pregunta se calcula para todos los módulos'
     }
 }
 

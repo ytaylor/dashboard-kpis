@@ -30,9 +30,7 @@ def mostrar_tab_kpis(df_filtrado, tiene_modulo, columnas_excluir):
     #     _mostrar_resumen_modulo(df_filtrado)
     #     _mostrar_matriz_promocion_modulo(df_filtrado)
     
-    # Análisis de satisfacción
-    st.markdown("---")
-    st.header("📊 Análisis de Satisfacción por Promoción")
+  
     _mostrar_analisis_satisfaccion(df_filtrado, tiene_modulo)
 
 
@@ -61,14 +59,17 @@ def _mostrar_metricas_principales(df_filtrado, tiene_modulo, columnas_excluir):
     with col4:
         if len(numeric_cols) > 0:
             # buscar la columna con este valor: Valora de forma global el equipo docente 
-            index_columna = df_filtrado.columns .get_loc('Valora de forma global el equipo docente') if 'Valora de forma global el equipo docente' in df_filtrado.columns else 89
-            primera_col_numerica = numeric_cols[index_columna]
+         
+            primera_col_numerica = numeric_cols[89] if len(numeric_cols) > 89 else numeric_cols[0]
             media = df_filtrado[primera_col_numerica].mean()
             st.metric(f"Media {primera_col_numerica}", f"{media:,.2f}")
         else:
             st.metric("Columnas Numéricas", len(numeric_cols))
 
 def _mostrar_analisis_satisfaccion(df_filtrado, tiene_modulo):
+      # Análisis de satisfacción
+    st.markdown("---")
+    st.header("📊 Análisis de Satisfacción por Promoción")
     """Muestra el análisis de satisfacción (expectativas y recomendación)"""
     columna_promocion = COLUMNAS['promocion']
     columna_modulo = COLUMNAS['modulo']
