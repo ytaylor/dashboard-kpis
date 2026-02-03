@@ -18,6 +18,13 @@ Este es un dashboard interactivo construido con Streamlit para el análisis de K
     -   `🔢 Datos Agrupados`: Tabla con los datos agrupados y listos para descargar.
 -   **Gráficos Interactivos**: Creados con Plotly para una mejor exploración de los datos.
 
+## Proyecto publicado en Streamlit Cloud
+
+Puedes acceder a la aplicación en vivo aquí:
+
+https://dashboard-kpis-ada.streamlit.app/
+
+
 ## 🛠️ Instalación
 
 Para ejecutar este proyecto localmente, sigue estos pasos:
